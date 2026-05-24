@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
+
 const applicationSlice = createSlice({
   name: "applications",
   initialState: {
@@ -105,6 +106,7 @@ export const fetchEmployerApplications = () => async (dispatch) => {
       { withCredentials: true }
     );
     dispatch(applicationSlice.actions.successForAllApplications(data.applications));
+    console.log(data)
   } catch (error) {
     dispatch(
       applicationSlice.actions.failureForAllApplications(

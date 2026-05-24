@@ -21,7 +21,7 @@ import { toast } from "react-toastify";
 const MyReports = () => {
   const dispatch = useDispatch();
   const { reports, loading, message, error } = useSelector(
-    (state) => state.report
+    (state) => state.report,
   );
 
   useEffect(() => {
@@ -53,7 +53,7 @@ const MyReports = () => {
 
   if (loading) {
     return (
-<div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <Spinner className="h-12 w-12 text-indigo-600" />
       </div>
     );
@@ -150,7 +150,7 @@ const MyReports = () => {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
-                          }
+                          },
                         )}
                       </span>
                     </div>

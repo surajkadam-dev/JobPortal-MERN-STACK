@@ -23,24 +23,38 @@ import About from "./pages/About";
 import JobDetails from "./components/JobDetails";
 import SavedJobs from "./components/SavedJobs";
 import AdminEmployerJobs from "./components/AdminEmployerJobs";
+import { socket } from "./socket";
+import { toast } from "react-toastify";
+import AIChat from "./components/AIChat";
 
 const App = () => {
   const dispatch = useDispatch();
-  const { isAuthenticated, error, user } = useSelector((state) => state.user);
-  console.log(user);
 
-  useEffect(() => {
-    dispatch(getUser());
-  }, []);
+  const { isAuthenticated, error, user } = useSelector((state) => state.user);
 
   useEffect(() => {
     if (isAuthenticated) {
-      if (user.isBlocked) {
-        dispatch(logout());
-        location.href = "/login";
-      }
+      dispatch(getUser());
     }
-  }, [user, error]);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated && user?._id) {
+      socket.emit("JOIN_USER", user._id);
+    }
+  }, [isAuthenticated, user]);
+  useEffect(() => {
+    socket.on("EMPLOYER_BLOCKED", () => {
+      toast.error("Your account has been blocked by admin");
+      dispatch(logout());
+
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
+    });
+
+    return () => socket.off("EMPLOYER_BLOCKED");
+  }, []);
 
   return (
     <>
@@ -66,6 +80,7 @@ const App = () => {
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<NotFound />} />
           <Route path="/saved-jobs" element={<SavedJobs />} />
+          <Route path="/chat" element={<AIChat />} />
         </Routes>
         <Footer />
         <ToastContainer position="top-right" theme="dark" />

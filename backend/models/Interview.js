@@ -10,5 +10,5 @@ const interviewSchema = new mongoose.Schema({
   status: { type: String, enum: ['Scheduled', 'Pending', 'Accepted','Rejected'], default: 'Scheduled' }
 });
 
-//module.exports = mongoose.model('Interview', interviewSchema);
+
 export const Interview=mongoose.model('Interview', interviewSchema);

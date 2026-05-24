@@ -7,94 +7,103 @@ import { sendToken } from '../utils/jwtToken.js';
 
 
 export const register = catchAsyncErrors(async (req, res, next) => {
-  try {
-    const {
-      name,
-      email,
-      phone,
-      address,
-      password,
-      role,
-      firstNiche,
-      secondNiche,
-      thirdNiche,
-      coverLetter,
-      secretKey
-    } = req.body;
 
-    if (!name || !email || !phone || !address || !password || !role) {
-      return next(new ErrorHandler("All fields are required.", 400));
-    }
+  const { name, email, phone, address, password, role, secretKey } = req.body;
 
-    if (role === "Job Seeker" && (!firstNiche || !secondNiche || !thirdNiche)) {
-      return next(
-        new ErrorHandler("Please provide your preferred job niches.", 400)
-      );
-    }
-    if (role === "Admin") {
-      if (secretKey !== process.env.ADMIN_SECRET_KEY) {
-        return next(new ErrorHandler("Your key is invalide", 403));
-      }
-    }
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return next(new ErrorHandler("Email is already registered.", 400));
-    }
-
-    const userData = {
-      name,
-      email,
-      phone,
-      address,
-      password,
-      role,
-      isAdmin: role === "Admin",
-      niches: {
-        firstNiche,
-        secondNiche,
-        thirdNiche,
-      },
-      coverLetter,
-    };
-
-    if (req.files && req.files.resume) {
-      const { resume } = req.files;
-      if (resume) {
-        try {
-          const cloudinaryResponse = await cloudinary.uploader.upload(
-            resume.tempFilePath,
-            { folder: "Job Portal" }
-          );
-          if (!cloudinaryResponse || cloudinaryResponse.error) {
-            return next(
-              new ErrorHandler("Failed to upload resume to cloud.", 500)
-            );
-          }
-          userData.resume = {
-            public_id: cloudinaryResponse.public_id,
-            url: cloudinaryResponse.secure_url,
-          };
-        } catch (error) {
-          return next(new ErrorHandler("Failed to upload resume", 500));
-        }
-      }
-    }
-
-    const user = await User.create(userData);
-    sendToken(user,201,res,"user Registered")
-
-
-  } catch (error) {
-    next(error);
+  if (!name || !email || !phone || !address || !password || !role) {
+    return next(new ErrorHandler("All fields are required.", 400));
   }
+
+  if (role === "Admin") {
+    if (secretKey !== process.env.ADMIN_SECRET_KEY) {
+      return next(new ErrorHandler("Invalid admin secret key.", 403));
+    }
+  }
+
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return next(new ErrorHandler("Email already registered.", 400));
+  }
+
+  const user = await User.create({
+    name,
+    email,
+    phone,
+    address,
+    password,
+    role,
+    isAdmin: role === "Admin",
+    profileCompleted: role === "Admin" ? true : false
+  });
+
+  sendToken(user, 201, res, "User Registered Successfully");
 });
+export const completeProfile = catchAsyncErrors(async (req, res, next) => {
 
+  let updateData = {};
+
+  if (req.body.skills && Array.isArray(req.body.skills)) {
+    updateData.skills = req.body.skills;
+  }
+
+  if (req.body.bio) {
+    updateData.bio = req.body.bio;
+  }
+
+  if (req.body.experienceLevel) {
+    updateData.experienceLevel = req.body.experienceLevel;
+  }
+
+  if (req.body.yearsOfExperience) {
+    updateData.yearsOfExperience = req.body.yearsOfExperience;
+  }
+
+  // Nested Education (dot notation)
+  if (req.body.qualification)
+    updateData["education.qualification"] = req.body.qualification;
+
+  if (req.body.college)
+    updateData["education.college"] = req.body.college;
+
+  if (req.body.graduationYear)
+    updateData["education.graduationYear"] = req.body.graduationYear;
+
+  // Resume upload
+  if (req.files && req.files.resume) {
+    const resume = req.files.resume;
+
+    const cloudinaryResponse = await cloudinary.uploader.upload(
+      resume.tempFilePath,
+      { folder: "Job Portal" }
+    );
+
+    updateData.resume = {
+      public_id: cloudinaryResponse.public_id,
+      url: cloudinaryResponse.secure_url
+    };
+  }
+
+  updateData.profileCompleted = true;
+
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "Profile completed successfully",
+    user
+  });
+});
 export const login = catchAsyncErrors(async (req, res, next) => {
-  const { role, email, password } = req.body;
 
-  if (!role || !email || !password) {
-    return next(new ErrorHandler("Email, Password, and Role are required", 400));
+  const { email, password } = req.body;
+  console.log(req.body)
+
+  if (!email || !password) {
+    return next(new ErrorHandler("Email and Password are required", 400));
   }
 
   const user = await User.findOne({ email }).select("+password");
@@ -103,32 +112,28 @@ export const login = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Invalid email or password", 400));
   }
 
-  // Check if the password matches
   const isPasswordMatched = await user.comparePassword(password);
+
   if (!isPasswordMatched) {
     return next(new ErrorHandler("Invalid email or password", 400));
   }
 
-  // Check if the user's role matches the provided role
-  if (user.role !== role) {
-    return next(new ErrorHandler("Invalid user role", 400));
-  }
-
+  // Auto unblock check
   user.checkUnblockStatus();
-  await user.save()
+  await user.save();
 
   if (user.isBlocked) {
-    return next(new ErrorHandler("Your account is temporarily blocked. Please try again later.", 403));
+    return next(
+      new ErrorHandler(
+        "Your account is temporarily blocked. Please try again later.",
+        403
+      )
+    );
   }
 
-  // Special case for Admin login - Ensure only real admins can log in
-  if (role === "Admin" && !user.isAdmin) {
-    return next(new ErrorHandler("Unauthorized access. You are not an admin.", 403));
-  }
+  sendToken(user, 200, res, "Login successful");
 
-  sendToken(user, 200, res, "User login successfully");
 });
-
 
 export const logout =catchAsyncErrors(async(req,res,next)=>
 {
@@ -154,56 +159,100 @@ export const getUser=catchAsyncErrors(async (req,res,next)=>
 })
 
 export const updateProfile = catchAsyncErrors(async (req, res, next) => {
-  let newUserData = {
-    name: req.body.name,
-    email: req.body.email,
-    phone: req.body.phone,
-    address: req.body.address,
+  const existingUser = await User.findById(req.user.id);
+  if (!existingUser) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  const {
+    name,
+    email,
+    phone,
+    address,
+    experienceLevel,
+    yearsOfExperience,
+    bio
+  } = req.body;
+
+  // Email uniqueness check
+  if (email) {
+    const emailExists = await User.findOne({ email });
+    if (emailExists && emailExists._id.toString() !== req.user.id) {
+      return next(new ErrorHandler("Email already in use.", 400));
+    }
+  }
+
+  let updateData = {};
+
+  if (name) updateData.name = name;
+  if (email) updateData.email = email;
+  if (phone) updateData.phone = phone;
+  if (address) updateData.address = address;
+  if (experienceLevel) updateData.experienceLevel = experienceLevel;
+  if (yearsOfExperience !== undefined) updateData.yearsOfExperience = yearsOfExperience;
+  if (bio) updateData.bio = bio;
+
+  // Skills
+  const skills = req.body["skills[]"];
+  if (skills) {
+    updateData.skills = Array.isArray(skills) ? skills : [skills];
+  }
+
+  // Education
+  const qualification = req.body["education[qualification]"];
+  const college = req.body["education[college]"];
+  const graduationYear = req.body["education[graduationYear]"];
+  if (qualification || college || graduationYear) {
+    updateData.education = {
+      qualification: qualification || "",
+      college: college || "",
+      graduationYear: graduationYear || null,
+    };
+  }
+
+  // Resume
+  if (req.files && req.files.resume) {
+    const resume = req.files.resume;
+    if (existingUser.resume?.public_id) {
+      await cloudinary.uploader.destroy(existingUser.resume.public_id);
+    }
+    const uploadedResume = await cloudinary.uploader.upload(
+      resume.tempFilePath,
+      { folder: "Job Portal" }
+    );
+    updateData.resume = {
+      public_id: uploadedResume.public_id,
+      url: uploadedResume.secure_url,
+    };
+  }
+
+  // Merge data for completeness check
+  const mergedUser = {
+    ...existingUser.toObject(),
+    ...updateData,
   };
 
-  if (req.user.role === "Job Seeker") {
-    newUserData.coverLetter = req.body.coverLetter; // Ensure cover letter is included
+  // Compute profile completion (ensuring boolean)
+  const isProfileComplete = Boolean(
+    mergedUser.skills?.length &&
+    mergedUser.education?.qualification?.trim() &&
+    mergedUser.experienceLevel &&
+    mergedUser.resume?.url
+  );
 
-    newUserData.niches = {
-      firstNiche: req.body.firstNiche,
-      secondNiche: req.body.secondNiche,
-      thirdNiche: req.body.thirdNiche,
-    };
+  updateData.profileCompleted = isProfileComplete;
 
-    const { firstNiche, secondNiche, thirdNiche } = newUserData.niches;
-
-    if (!firstNiche || !secondNiche || !thirdNiche) {
-      return next(new ErrorHandler("Please provide your preferred job niches", 400));
-    }
-  }
-
-  if (req.files && req.user.role === "Job Seeker") {
-    const resume = req.files.resume;
-    if (resume) {
-      const currentResumeId = req.user.resume?.public_id;
-      if (currentResumeId) {
-        await cloudinary.uploader.destroy(currentResumeId);
-      }
-      const newResume = await cloudinary.uploader.upload(resume.tempFilePath, {
-        folder: "Job Portal",
-      });
-      newUserData.resume = {
-        public_id: newResume.public_id,
-        url: newResume.secure_url,
-      };
-    }
-  }
-
-  const user = await User.findByIdAndUpdate(req.user.id, newUserData, {
-    new: true,
-    runValidators: true,
-    useFindAndModify: false,
-  });
+  // Update user
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
 
   res.status(200).json({
     success: true,
+    message: "Profile updated successfully",
     user,
-    message: "Profile updated",
   });
 });
 
@@ -267,11 +316,11 @@ export const unsaveJob = catchAsyncErrors(async (req, res, next) => {
 
 export const getSavedJobs = async (req, res) => {
   try {
-    // Find the logged-in user and populate savedJobs with full job details
+    
     const user = await User.findById(req.user.id).populate({
       path: "savedJobs",
-      model: Job, // Explicitly specify the Job model
-      select: "title companyName introduction location salary jobType jobPostedOn", // Select required fields
+      model: Job, 
+      select: "title companyName introduction location salary jobType jobPostedOn", 
     });
 
     if (!user) {
@@ -280,7 +329,7 @@ export const getSavedJobs = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      savedJobs: user.savedJobs, // Returns full job details
+      savedJobs: user.savedJobs, 
     });
   } catch (error) {
     res.status(500).json({

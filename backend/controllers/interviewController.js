@@ -1,4 +1,4 @@
-// controllers/interviewController.js
+
 import mongoose from 'mongoose';
 import {Interview} from '../models/Interview.js'
 import { User } from '../models/userSchema.js';
@@ -6,19 +6,19 @@ import { Job } from '../models/jobSchema.js';
 import { sendEmail } from '../utils/sendEmail.js';
 import ErrorHandler from '../middleware/error.js';
 
-// 📝 Schedule interview (Employer only)
+
 export const scheduleInterview = async (req, res, next) => {
   try {
     const { applicationId, jobId, candidateId } = req.params;
     const { dateTime, meetingLink } = req.body;
     const employerId = req.user._id.toString();
 
-    // 🔎 Validate parameters
+    
     if (!jobId || !candidateId || !applicationId) {
       return next(new ErrorHandler("Missing applicationId, jobId, or candidateId", 400));
     }
 
-    // 🔍 Fetch employer, candidate, and job
+    
     const [employer, candidate, job] = await Promise.all([
       User.findById(employerId),
       User.findById(candidateId),
@@ -29,14 +29,14 @@ export const scheduleInterview = async (req, res, next) => {
       return next(new ErrorHandler("Employer, Candidate, or Job not found.", 404));
     }
 
-    // 🔐 Ensure employer is authorized to schedule interviews for this job
+    
     if (job.postedBy.toString() !== employerId) {
       return next(new ErrorHandler("You can only schedule interviews for your posted jobs.", 403));
     }
 
-    // 🚫 Prevent multiple interviews for the same application
+    
     const existingInterview = await Interview.findOne({
-      applicationId: new mongoose.Types.ObjectId(applicationId),  // Ensure ObjectId comparison
+      applicationId: new mongoose.Types.ObjectId(applicationId),  
       jobId: new mongoose.Types.ObjectId(jobId),
       candidateId: new mongoose.Types.ObjectId(candidateId),
     });
@@ -46,7 +46,7 @@ export const scheduleInterview = async (req, res, next) => {
       return next(new ErrorHandler("An interview has already been scheduled for this application.", 400));
     }
 
-    // ✅ Create the interview
+    
     const interview = await Interview.create({
       employerId,
       candidateId,
@@ -57,7 +57,7 @@ export const scheduleInterview = async (req, res, next) => {
       status: "Scheduled",
     });
 
-    // 📧 Email notifications
+    
     const formattedDate = new Date(dateTime).toLocaleString();
 
     const candidateEmailContent = {
@@ -84,12 +84,12 @@ export const scheduleInterview = async (req, res, next) => {
   }
 };
 
-// 📅 Get all interviews for a user
+
 export const getUserInterviews = async (req, res, next) => {
   try {
     const { userId } = req.params;
 
-    // 🔒 Check if user is accessing their own interviews
+    
     if (req.user._id.toString() !== userId && req.user.role !== 'Employer') {
       return next(new ErrorHandler('Unauthorized to view these interviews.', 403));
     }
@@ -104,13 +104,13 @@ export const getUserInterviews = async (req, res, next) => {
   }
 };
 
-// ✅ Update interview status (Employer only)
+
 export const updateInterviewStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    // 🔒 Verify employer role
+    
     if (req.user.role !== 'Employer') {
       return next(new ErrorHandler('Only employers can update interview status.', 403));
     }
@@ -124,7 +124,7 @@ export const updateInterviewStatus = async (req, res, next) => {
     interview.status = status;
     await interview.save();
 
-    // ✉️ Notify candidate about status update
+    
     await sendEmail({
       email: interview.candidateId.email,
       subject: 'Interview Status Updated',
@@ -137,7 +137,7 @@ export const updateInterviewStatus = async (req, res, next) => {
   }
 };
 
-// 🗑️ Delete interview (Employer only)
+
 export const deleteInterview = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -154,7 +154,7 @@ export const deleteInterview = async (req, res, next) => {
 
     await interview.deleteOne();
 
-    // ✉️ Notify candidate about cancellation
+    
     await sendEmail({
       email: interview.candidateId.email,
       subject: 'Interview Cancelled',

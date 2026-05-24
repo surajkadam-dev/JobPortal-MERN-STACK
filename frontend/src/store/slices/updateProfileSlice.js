@@ -29,6 +29,7 @@ const updateProfileSlice = createSlice({
       state.error = null;
       state.loading = false;
       state.isUpdated = true;
+      state.message = action.payload;
     },
     updatePasswordFailed(state, action) {
       state.error = action.payload;
@@ -40,8 +41,14 @@ const updateProfileSlice = createSlice({
       state.isUpdated = false;
       state.loading = false;
     },
+    resetUpdateProfileState(state) {
+  state.error = null;
+  state.isUpdated = false;
+  state.loading = false;
+}
   },
 });
+export const { resetUpdateProfileState } = updateProfileSlice.actions;
 
 export const updateProfile = (data) => async (dispatch) => {
   dispatch(updateProfileSlice.actions.updateProfileRequest());
@@ -54,7 +61,7 @@ export const updateProfile = (data) => async (dispatch) => {
         headers: { "Content-Type": "multipart/form-data" },
       }
     );
-    dispatch(updateProfileSlice.actions.updateProfileSuccess());
+    dispatch(updateProfileSlice.actions.updateProfileSuccess(response.data.message));
   } catch (error) {
     dispatch(
       updateProfileSlice.actions.updateProfileFailed(
@@ -87,5 +94,6 @@ export const updatePassword = (data) => async (dispatch) => {
 export const clearAllUpdateProfileErrors = () => (dispatch) => {
   dispatch(updateProfileSlice.actions.profileResetAfterUpdate());
 };
+
 
 export default updateProfileSlice.reducer;

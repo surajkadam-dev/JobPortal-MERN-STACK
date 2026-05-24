@@ -8,12 +8,12 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.params;
   const { name, email, phone, address, coverLetter } = req.body;
 
-  // Validate required fields
+  
   if (!name || !email || !phone || !address || !coverLetter) {
     return next(new ErrorHandler("All fields are required.", 400));
   }
 
-  // Fetch job details
+  
   const jobDetails = await Job.findById(id);
   console.log("job details:",jobDetails);
   if (!jobDetails) {
@@ -24,7 +24,7 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
   if (jobDetails.expiryDate && new Date(jobDetails.expiryDate) < currentDate) {
     return next(new ErrorHandler("This job has expired and cannot be applied for.", 400));
   }
-  // Check if the user has already applied
+  
   const isAlreadyApplied = await Application.findOne({
     "jobInfo.jobId": id,
     "jobSeekerInfo.id": req.user._id,
@@ -35,7 +35,7 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
     );
   }
 
-  // Check if resume exists in user profile
+  
   if (!req.user.resume || !req.user.resume.url) {
     return next(
       new ErrorHandler(
@@ -48,7 +48,7 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
   await jobDetails.save();
   console.log("job details aplplicant:",jobDetails.applicant)
 
-  // Create job seeker info using profile resume
+  
   const jobSeekerInfo = {
     id: req.user._id,
     name,
@@ -63,7 +63,7 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
     },
   };
 
-  // Employer and job info
+  
   const employerInfo = {
     id: jobDetails.postedBy,
     role: "Employer",
@@ -76,7 +76,7 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
 
   };
 
-  // Create application
+  
   const application = await Application.create({
     jobSeekerInfo,
     employerInfo,
@@ -93,18 +93,28 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
 
 
 
-export const employerGetAllApplication=catchAsyncErrors(async(req,res,next)=>
-{
-  const { _id } = req.user;
-  const applications = await Application.find({
-    "employerInfo.id": _id,
-    "deletedBy.employer": false,
-  });
-  res.status(200).json({
-    success: true,
-    applications,
-  });
-})
+export const employerGetAllApplication = catchAsyncErrors(
+  async (req, res, next) => {
+    const { _id } = req.user;
+
+    const applications = await Application.find({
+      "employerInfo.id": _id,
+      "deletedBy.employer": false,
+    })
+      .populate({
+        path: "jobSeekerInfo.id",
+        model: "User",
+        select:
+          "name email phone address skills education experienceLevel yearsOfExperience bio resume profileCompleted",
+      })
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      applications,
+    });
+  }
+);
 export const jobSeekerGetAllApplication=catchAsyncErrors(async(req,res,next)=>
 {
   const { _id } = req.user;
@@ -122,14 +132,14 @@ export const deleteApplicaton = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.params;
   const { role, _id: userId } = req.user;
 
-  // Find the application
+  
   const application = await Application.findById(id);
   if (!application) {
     console.log("Application not found:", id);
     return next(new ErrorHandler("Application not found.", 404));
   }
 
-  // Find the related job
+  
   const job = await Job.findById(application.jobInfo.jobId);
   console.log("Job fetched:", job);
   if (!job) {
@@ -137,11 +147,11 @@ export const deleteApplicaton = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Job not found.", 404));
   }
 
-  // Ensure deletedBy exists
+  
   application.deletedBy = application.deletedBy || { employer: false, jobSeeker: false };
   console.log("Before update:", application.deletedBy);
 
-  // Update deletedBy based on role
+  
   switch (role) {
     case "Job Seeker":
       application.deletedBy.jobSeeker = true;
@@ -157,7 +167,7 @@ export const deleteApplicaton = catchAsyncErrors(async (req, res, next) => {
   console.log("After update:", application.deletedBy);
   await application.save();
 
-  // If both employer and job seeker deleted, remove user ID from job & delete application
+  
   if (application.deletedBy.employer && application.deletedBy.jobSeeker) {
     console.log("Both employer and job seeker deleted, removing application:", application._id);
 
@@ -204,13 +214,13 @@ export const updateStatus = async (req, res) => {
     application.status = status;
     await application.save();
 
-    // ✅ Fetch updated applications list
+    
     const updatedApplications = await Application.find(); 
 
     return res.status(200).json({
       message: "Status updated successfully.",
       success: true,
-      applications: updatedApplications, // ✅ Send updated list
+      applications: updatedApplications, 
     });
   } catch (error) {
     console.log(error);
@@ -223,7 +233,7 @@ export const updateStatus = async (req, res) => {
 
 
 
-// ✅ Get Application by ID
+
 export const getApplicationById = async (req, res) => {
   try {
     const {id}=req.params;

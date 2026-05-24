@@ -2,10 +2,40 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getSavedJobs } from "../store/slices/userSlice";
 import { Link } from "react-router-dom";
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import {
+  Briefcase,
+  MapPin,
+  DollarSign,
+  Calendar,
+  BookmarkCheck,
+  ArrowRight,
+} from "lucide-react";
+
+// Skeleton component for loading state
+const JobCardSkeleton = () => (
+  <div className="bg-white rounded-2xl shadow-sm p-5 animate-pulse">
+    <div className="flex items-center gap-3 mb-4">
+      <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+      <div className="flex-1">
+        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+      </div>
+    </div>
+    <div className="h-5 bg-gray-200 rounded w-2/3 mb-3"></div>
+    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+    <div className="h-4 bg-gray-200 rounded w-5/6 mb-4"></div>
+    <div className="flex gap-2 mb-4">
+      <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+      <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+      <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+    </div>
+    <div className="flex justify-between gap-2">
+      <div className="h-10 bg-gray-200 rounded-lg w-1/2"></div>
+      <div className="h-10 bg-gray-200 rounded-lg w-1/2"></div>
+    </div>
+  </div>
+);
 
 const SavedJobs = () => {
   const dispatch = useDispatch();
@@ -15,101 +45,168 @@ const SavedJobs = () => {
     dispatch(getSavedJobs());
   }, [dispatch]);
 
-  return (
-    <div className="flex flex-col md:flex-row items-start justify-center gap-8 p-6">
-      {/* Left Side Navigation */}
-      <motion.div
-        initial={{ x: -100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 80 }}
-        className="w-full md:w-1/3 p-6 rounded-2xl shadow-lg bg-gradient-to-br
-         from-blue-500 to-indigo-600 text-white space-y-4 
-         h-auto text-center sticky top-20"
-      >
-        <h2 className="text-3xl font-bold">Dashboard</h2>
-        <Link
-          to="/dashboard"
-          className="block w-full text-center py-3 rounded-lg bg-white text-blue-600 font-semibold hover:bg-gray-100 transition-transform transform hover:scale-105"
-        >
-          Go to Dashboard
-        </Link>
-        <p className="text-sm leading-relaxed">
-          View and manage your saved jobs. Click on job details to apply or
-          learn more.
-        </p>
-      </motion.div>
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 },
+    },
+  };
 
-      {/* Right Side Job Section */}
-      <motion.div
-        initial={{ x: 100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 80 }}
-        className="w-full md:w-2/3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-      >
-        {loading ? (
-          <p className="col-span-full text-center text-gray-500">
-            Loading saved jobs...
-          </p>
-        ) : savedJobs && savedJobs.length > 0 ? (
-          savedJobs.map((job, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-              className="bg-white shadow-xl rounded-2xl overflow-hidden flex flex-col h-auto p-5 transition-transform transform hover:scale-105 hover:shadow-2xl"
-            >
-              <div className="flex items-center gap-3 my-3">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src="https://www.shutterstock.com/image-vector/circle-line-simple-design-logo-600nw-2174926871.jpg" />
-                </Avatar>
-                <div>
-                  <h1 className="font-semibold text-lg">{job.companyName}</h1>
-                  <p className="text-sm text-gray-500">{job.location}</p>
-                </div>
-              </div>
-              <h2 className="font-bold text-xl my-2 text-blue-700">
-                {job.title}
-              </h2>
-              <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                {job.introduction}
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 100 },
+    },
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Header */}
+      <div className="bg-[#1B1D3E] text-white">
+        <div className="container mx-auto px-4 py-8 md:py-12">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2">
+                Saved Jobs
+              </h1>
+              <p className="text-indigo-200 text-lg">
+                {savedJobs?.length || 0} jobs saved for later
               </p>
-              <div className="flex items-center gap-2 mb-4 flex-wrap">
-                <Badge
-                  className="text-blue-700 font-bold bg-blue-100"
-                  variant="ghost"
-                >
-                  12 Positions
-                </Badge>
-                <Badge
-                  className="text-red-600 font-bold bg-red-100"
-                  variant="ghost"
-                >
-                  {job.jobType}
-                </Badge>
-                <Badge
-                  className="text-purple-700 font-bold bg-purple-100"
-                  variant="ghost"
-                >
-                  Rs. {job.salary}
-                </Badge>
-              </div>
-              <div className="flex justify-between mt-auto">
-                <Button className="bg-orange-500 text-white hover:bg-orange-600">
-                  <Link to={`/job/${job._id}`}>Details</Link>
-                </Button>
-                <Button className="bg-blue-600 text-white hover:bg-blue-700">
-                  <Link to={`/post/application/${job._id}`}>Apply Now</Link>
-                </Button>
-              </div>
-            </motion.div>
-          ))
+            </div>
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl transition-all backdrop-blur-sm border border-white/20 w-fit"
+            >
+              <ArrowRight className="w-4 h-4 rotate-180" />
+              Back to Dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8 md:py-12">
+        {loading ? (
+          // Skeleton grid
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {[...Array(6)].map((_, i) => (
+              <motion.div key={i} variants={itemVariants}>
+                <JobCardSkeleton />
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : savedJobs && savedJobs.length > 0 ? (
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {savedJobs.map((job) => (
+              <motion.div
+                key={job._id}
+                variants={itemVariants}
+                whileHover={{ y: -4 }}
+                className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden"
+              >
+                <div className="p-5">
+                  {/* Header with company info */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-[#1B1D3E]/10 rounded-xl flex items-center justify-center text-[#1B1D3E] font-bold text-lg">
+                        {job.companyName?.charAt(0) || "C"}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 line-clamp-1">
+                          {job.companyName}
+                        </h3>
+                        <p className="text-sm text-gray-500 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {job.location}
+                        </p>
+                      </div>
+                    </div>
+                    <BookmarkCheck className="w-5 h-5 text-[#1B1D3E] fill-current" />
+                  </div>
+
+                  {/* Job Title */}
+                  <h4 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#1B1D3E] transition-colors">
+                    {job.title}
+                  </h4>
+
+                  {/* Description */}
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    {job.introduction}
+                  </p>
+
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <span className="px-3 py-1 bg-[#1B1D3E]/10 text-[#1B1D3E] rounded-full text-xs font-medium">
+                      {job.positions}{" "}
+                      {job.positions > 1 ? "Positions" : "Position"}
+                    </span>
+                    <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                      {job.jobType}
+                    </span>
+                    <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                      ₹{job.salary}
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <Link
+                      to={`/job/${job._id}`}
+                      className="flex-1 text-center py-2.5 border-2 border-[#1B1D3E] text-[#1B1D3E] rounded-xl font-semibold hover:bg-[#1B1D3E] hover:text-white transition-colors"
+                    >
+                      Details
+                    </Link>
+                    <Link
+                      to={`/post/application/${job._id}`}
+                      className="flex-1 text-center py-2.5 bg-[#1B1D3E] text-white rounded-xl font-semibold hover:bg-[#2a2c4a] transition-colors"
+                    >
+                      Apply
+                    </Link>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         ) : (
-          <p className="col-span-full text-center text-gray-500">
-            No saved jobs found.
-          </p>
+          // Empty state
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-16"
+          >
+            <div className="inline-flex p-4 bg-[#1B1D3E]/10 rounded-full mb-4">
+              <BookmarkCheck className="w-12 h-12 text-[#1B1D3E]" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              No saved jobs yet
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Start exploring jobs and save the ones you like.
+            </p>
+            <Link
+              to="/jobs"
+              className="inline-flex items-center gap-2 bg-[#1B1D3E] text-white px-6 py-3 rounded-xl hover:bg-[#2a2c4a] transition-colors"
+            >
+              Browse Jobs
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 };

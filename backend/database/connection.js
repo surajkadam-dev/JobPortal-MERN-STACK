@@ -5,7 +5,7 @@ export const connection = async () => {
     dbName: "Project"
   }).then(() => {
     console.log("Databse connected successfully");
-  }).catch(err => { console.log("some occured error") })
+  }).catch(err => { console.log("some occured error",err) })
 
 
 

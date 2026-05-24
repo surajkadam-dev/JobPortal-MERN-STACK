@@ -104,7 +104,7 @@ const jobSlice = createSlice({
 });
 
 export const fetchJobs =
-  (city, niche, searchKeyword = "") =>
+  ({city, searchKeyword = ""}) =>
   async (dispatch) => {
     try {
       dispatch(jobSlice.actions.requestForAllJobs());
@@ -116,9 +116,7 @@ export const fetchJobs =
       if (city) {
         queryParams.push(`city=${city}`);
       }
-      if (niche) {
-        queryParams.push(`niche=${niche}`);
-      }
+
 
       link += queryParams.join("&");
       console.log(link)
@@ -131,7 +129,7 @@ export const fetchJobs =
   };
 
 export const fetchSingleJob = (jobId) => async (dispatch) => {
-  console.log("JobId",jobId);
+ 
   dispatch(jobSlice.actions.requestForSingleJob());
   try {
     const response = await axios.get(
@@ -167,9 +165,11 @@ export const getMyJobs = () => async (dispatch) => {
       `http://localhost:8000/api/v1/job/getmyjobs`,
       { withCredentials: true }
     );
+    console.log("response:",response);
     dispatch(jobSlice.actions.successForMyJobs(response.data.myJobs));
     dispatch(jobSlice.actions.clearAllErrors());
   } catch (error) {
+    console.log(error);
     dispatch(jobSlice.actions.failureForMyJobs(error.response.data.message));
   }
 };

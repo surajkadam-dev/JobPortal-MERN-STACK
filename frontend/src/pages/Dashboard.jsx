@@ -37,12 +37,24 @@ const Dashboard = () => {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+  useEffect(() => {
+    if (componentName === "savedJobs") {
+      navigate("/saved-jobs");
+    }
+  }, [componentName, navigate]);
 
   useEffect(() => {
-    dispatch(getBlockedEmployers());
+    if (user?.role === "admin") {
+      dispatch(getBlockedEmployers());
+    }
+  }, [dispatch, user]);
+  useEffect(() => {
     if (error) toast.error(error);
+  }, [error]);
+
+  useEffect(() => {
     if (message) toast.success(message);
-  }, [dispatch, error, message]);
+  }, [message]);
 
   useEffect(() => {
     if (isMobile && isSidebarOpen) {
@@ -71,13 +83,13 @@ const Dashboard = () => {
       case "myInterviews":
         return <UserInterviewsList />;
       case "savedJobs":
-        return navigate("/saved-jobs");
+        return null;
       case "Users":
         return <AdminUsersList />;
       case "Reports":
         return <AdminReports />;
       case "myReports":
-          return <MyReports/>;
+        return <MyReports />;
       default:
         return <MyProfile />;
     }

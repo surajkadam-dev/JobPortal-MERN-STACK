@@ -1,4 +1,5 @@
 import express from 'express'
+import os from "os"
 import { config } from 'dotenv';
 import cors from 'cors'
 import cookieParser from 'cookie-parser';
@@ -13,13 +14,16 @@ import adminRoutes from "./routes/adminRutes.js"
 import applicationRouter from './routes/applicationRouter.js'
 import interviewRouter from './routes/interviewRouter.js'
 import reportRoute from "./routes/reportRoutes.js"
+import aiRoutes from "./routes/aiRoutes.js";
 
 import { newsLetterCron } from './automation/newsLetterCron.js';
 import { scheduleJobDeletion } from './automation/cronJobs.js';
+
  const app=express()
  config({
   path:'./config/config.env'
  })
+
 
  app.use(cors(
   {
@@ -46,6 +50,7 @@ credentials:true
  app.use("/api/v1/admin",adminRoutes)
  app.use("/api/v1",reportRoute)
  app.use('/api/v1', validationRoutes);
+ app.use('/api/v1/ai',aiRoutes);
  newsLetterCron();
  scheduleJobDeletion();
  connection();

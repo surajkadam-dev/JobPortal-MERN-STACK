@@ -22,48 +22,77 @@ export const postJob = catchAsyncErrors(async (req, res, next) => {
     personalWebsiteUrl,
     jobNiche,
     validityPeriod,
-    
+    requiredSkills   // ✅ NEW FIELD
   } = req.body;
 
-  console.log("job post: ",req.body)
+  /* ==============================
+     VALIDATION
+  ============================== */
 
-  // Validate required fields
   if (
-    !title || !jobType || !location || !companyName || !introduction ||
-    !responsibilities || !qualifications || !salary || !jobNiche || !validityPeriod
+    !title ||
+    !jobType ||
+    !location ||
+    !companyName ||
+    !introduction ||
+    !responsibilities ||
+    !qualifications ||
+    !salary ||
+    !jobNiche ||
+    !validityPeriod ||
+    !requiredSkills
   ) {
     return next(new ErrorHandler("Please provide full job details.", 400));
   }
 
- 
+  // ✅ Validate requiredSkills
+  if (!Array.isArray(requiredSkills) || requiredSkills.length === 0) {
+    return next(
+      new ErrorHandler("Please provide at least one required skill.", 400)
+    );
+  }
+
+  // Normalize skills (remove extra spaces)
+  const normalizedSkills = requiredSkills.map(skill =>
+    skill.trim()
+  );
+
   if (hiringMultipleCandidates && !["Yes", "No"].includes(hiringMultipleCandidates)) {
     return next(new ErrorHandler("Invalid value for hiringMultipleCandidates.", 400));
   }
 
-  
+  /* ==============================
+     EXPIRY DATE CALCULATION
+  ============================== */
 
-
-  // Function to calculate expiry date based on validity period
   const calculateExpireDate = (validity) => {
     let expiryDate = new Date();
+
     if (validity === "3-month") {
       expiryDate.setMonth(expiryDate.getMonth() + 3);
-    } else if (validity === "6-month") {
+    }
+    else if (validity === "6-month") {
       expiryDate.setMonth(expiryDate.getMonth() + 6);
-    } else if (validity === "1-year") {
+    }
+    else if (validity === "1-year") {
       expiryDate.setFullYear(expiryDate.getFullYear() + 1);
-    } else {
+    }
+    else {
       return null;
     }
+
     return expiryDate;
   };
 
   const expiryDate = calculateExpireDate(validityPeriod);
+
   if (!expiryDate) {
     return next(new ErrorHandler("Invalid job validity period.", 400));
   }
 
-  const postedBy = req.user._id;
+  /* ==============================
+     CREATE JOB
+  ============================== */
 
   const job = await Job.create({
     title,
@@ -81,9 +110,9 @@ export const postJob = catchAsyncErrors(async (req, res, next) => {
       url: personalWebsiteUrl,
     },
     jobNiche,
+    requiredSkills: normalizedSkills,   // ✅ SAVED HERE
     expiryDate,
-    postedBy,
-   
+    postedBy: req.user._id,
   });
 
   res.status(201).json({
@@ -96,24 +125,27 @@ export const postJob = catchAsyncErrors(async (req, res, next) => {
 
 
 export const getAllJobs = catchAsyncErrors(async (req, res, next) => {
-  const { city, niche, searchKeyword } = req.query;
+
+  const { city, searchKeyword } = req.query;
   const query = {};
+
+  // Filter by city
   if (city) {
     query.location = city;
   }
-  if (niche) {
-    query.jobNiche = niche;
-  }
+
+  // General keyword search
   if (searchKeyword) {
     query.$or = [
       { title: { $regex: searchKeyword, $options: "i" } },
       { companyName: { $regex: searchKeyword, $options: "i" } },
       { introduction: { $regex: searchKeyword, $options: "i" } },
-      {location:{$regex:searchKeyword,$options:"i"}},
-      {jobNiche:{$regex:searchKeyword,$options:"i"}}
+      { location: { $regex: searchKeyword, $options: "i" } }
     ];
   }
+
   const jobs = await Job.find(query);
+
   res.status(200).json({
     success: true,
     jobs,
@@ -164,7 +196,7 @@ export const deleteExpiredJobs = async (req, res) => {
   const currentDate = new Date();
 
   try {
-    // Find expired jobs
+    
     const expiredJobs = await Job.find({ expiryDate: { $lte: currentDate } });
 
     if (expiredJobs.length === 0) {
@@ -174,13 +206,13 @@ export const deleteExpiredJobs = async (req, res) => {
     for (const job of expiredJobs) {
       const jobId = job._id;
 
-      // Delete applications linked to this job
+      
       await Application.deleteMany({ "jobInfo.jobId": jobId });
 
-      // Delete interviews linked to this job
+      
       await Interview.deleteMany({ jobId });
 
-      // Delete job from database
+      
       await Job.findByIdAndDelete(jobId);
 
       console.log(`Deleted job: ${jobId}, along with related applications and interviews.`);

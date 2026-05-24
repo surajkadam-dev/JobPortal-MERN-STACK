@@ -9,7 +9,7 @@ import {
   FiUser,
   FiEdit,
   FiClock,
-  FiTrash
+  FiTrash,
 } from "react-icons/fi";
 import {
   getAllReports,
@@ -22,7 +22,7 @@ import {
 const AdminReports = () => {
   const dispatch = useDispatch();
   const { reports, loading, error, message } = useSelector(
-    (state) => state.report
+    (state) => state.report,
   );
   const [statusUpdates, setStatusUpdates] = useState({});
 
@@ -60,7 +60,6 @@ const AdminReports = () => {
     }
   };
 
-  // Animation configurations
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {

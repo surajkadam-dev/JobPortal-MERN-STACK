@@ -3,47 +3,52 @@ import {Job} from "../models/jobSchema.js"
 import { catchAsyncErrors } from "../middleware/catchAsyncErrors.js";
 import ErrorHandler from "../middleware/error.js";
 
+
 export const blockEmployer = catchAsyncErrors(async (req, res, next) => {
   const { employerId } = req.params;
   const { durationInDays } = req.body;
 
-  // Validate duration (minimum 1 day)
+  
   if (!durationInDays || durationInDays < 1) {
     return next(new ErrorHandler("Valid duration (at least 1 day) is required.", 400));
   }
 
-  // Atomic update with validation
+  
   const employer = await User.findByIdAndUpdate(
     employerId,
     {
       $set: {
         isBlocked: true,
-        unblockTime: new Date(Date.now() + durationInDays * 86400000), // Precise time calculation
+        unblockTime: new Date(Date.now() + durationInDays * 86400000), 
         lastBlocked: Date.now()
       }
     },
     {
       new: true,
       runValidators: true,
-      select: 'name role isBlocked unblockTime lastBlocked' // Only return needed fields
+      select: 'name role isBlocked unblockTime lastBlocked' 
     }
   );
 
   if (!employer || employer.role !== "Employer") {
     return next(new ErrorHandler("Employer not found.", 404));
   }
+   const io = req.app.get("io");
+ io.to(employerId).emit("EMPLOYER_BLOCKED", {
+  message: "Your account has been blocked by admin",
+});
 
   res.status(200).json({
     success: true,
     message: `Employer ${employer.name} has been blocked for ${durationInDays} days.`,
-    lastBlocked: employer.lastBlocked, // Critical for client-side polling
+    lastBlocked: employer.lastBlocked, 
     unblockTime: employer.unblockTime
   });
 });
 
 
 export const unblockEmployer = catchAsyncErrors(async (req, res, next) => {
-  const { employerId } = req.params; // Extract employerId from URL params
+  const { employerId } = req.params; 
 
   const employer = await User.findById(employerId);
 
@@ -57,7 +62,7 @@ export const unblockEmployer = catchAsyncErrors(async (req, res, next) => {
 
   employer.isBlocked = false;
   employer.unblockTime = null; 
-  employer.lastBlocked=null;// Remove the unblock time
+  employer.lastBlocked=null;
   await employer.save();
 
   res.status(200).json({
@@ -77,7 +82,7 @@ export const getBlockedEmployers = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const getAllUsers = catchAsyncErrors(async (req, res, next) => {
-  const users = await User.find().select("-password"); // Exclude password for security
+  const users = await User.find().select("-password"); 
 
   res.status(200).json({
     success: true,

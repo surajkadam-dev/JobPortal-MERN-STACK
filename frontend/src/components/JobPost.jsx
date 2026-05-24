@@ -6,8 +6,26 @@ import {
   postJob,
   resetJobSlice,
 } from "../store/slices/jobSlice";
+import {
+  Briefcase,
+  MapPin,
+  Building2,
+  IndianRupee,
+  Calendar,
+  Users,
+  Tag,
+  FileText,
+  GraduationCap,
+  Gift,
+  Link as LinkIcon,
+  Globe,
+  Cpu,
+} from "lucide-react";
 
 const JobPost = () => {
+  const dispatch = useDispatch();
+  const { error, message, loading } = useSelector((state) => state.jobs);
+
   const [formData, setFormData] = useState({
     title: "",
     jobType: "",
@@ -17,16 +35,17 @@ const JobPost = () => {
     responsibilities: "",
     qualifications: "",
     offers: "",
-    jobNiche: "",
     salary: "",
     hiringMultipleCandidates: "No",
     personalWebsiteTitle: "",
     personalWebsiteUrl: "",
+    jobNiche: "",
     validityPeriod: "",
+    requiredSkills: "",
   });
 
-  const dispatch = useDispatch();
-  const { error, message } = useSelector((state) => state.jobs);
+  // For skills array (converted from comma-separated string)
+  const [skillsInput, setSkillsInput] = useState("");
 
   useEffect(() => {
     if (error) {
@@ -36,6 +55,7 @@ const JobPost = () => {
     if (message) {
       toast.success(message);
       dispatch(resetJobSlice());
+      // Reset form
       setFormData({
         title: "",
         jobType: "",
@@ -45,29 +65,31 @@ const JobPost = () => {
         responsibilities: "",
         qualifications: "",
         offers: "",
-        jobNiche: "",
         salary: "",
         hiringMultipleCandidates: "No",
         personalWebsiteTitle: "",
         personalWebsiteUrl: "",
+        jobNiche: "",
         validityPeriod: "",
+        requiredSkills: "",
       });
+      setSkillsInput("");
     }
   }, [error, message, dispatch]);
 
-  // Handle form change
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Function to calculate expiration date
+  const handleSkillsChange = (e) => {
+    setSkillsInput(e.target.value);
+    setFormData((prev) => ({ ...prev, requiredSkills: e.target.value }));
+  };
+
+  // Calculate expiry date based on validity period
   const calculateExpireDate = (validity) => {
-    let expireDate = new Date();
+    const expireDate = new Date();
     if (validity === "3-month") {
       expireDate.setMonth(expireDate.getMonth() + 3);
     } else if (validity === "6-month") {
@@ -78,191 +100,309 @@ const JobPost = () => {
     return expireDate.toISOString();
   };
 
-  // Handle form submit
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    // Basic validation
     if (!formData.validityPeriod) {
       toast.error("Please select job validity period.");
       return;
     }
 
+    // Convert skills string to array
+    const skillsArray = skillsInput
+      .split(",")
+      .map((skill) => skill.trim())
+      .filter(Boolean);
+
     const jobData = {
       ...formData,
-      expiryDate: calculateExpireDate(formData.validityPeriod), // Fixed key name
+      requiredSkills: skillsArray,
+      expiryDate: calculateExpireDate(formData.validityPeriod),
     };
 
     dispatch(postJob(jobData));
   };
 
+  // Field groups for better organization
+  const sections = [
+    {
+      title: "Basic Information",
+      icon: <Briefcase className="w-5 h-5" />,
+      fields: [
+        {
+          name: "title",
+          label: "Job Title",
+          type: "text",
+          required: true,
+          icon: <Briefcase />,
+        },
+        {
+          name: "jobType",
+          label: "Job Type",
+          type: "select",
+          options: ["Full-time", "Part-time", "Contract", "Internship"],
+          required: true,
+          icon: <Briefcase />,
+        },
+        {
+          name: "location",
+          label: "Location",
+          type: "text",
+          required: true,
+          icon: <MapPin />,
+        },
+        {
+          name: "companyName",
+          label: "Company Name",
+          type: "text",
+          required: true,
+          icon: <Building2 />,
+        },
+        {
+          name: "jobNiche",
+          label: "Job Niche (e.g., Technology, Marketing)",
+          type: "text",
+          required: true,
+          icon: <Tag />,
+        },
+      ],
+    },
+    {
+      title: "Compensation & Duration",
+      icon: <IndianRupee className="w-5 h-5" />,
+      fields: [
+        {
+          name: "salary",
+          label: "Salary (LPA)",
+          type: "text",
+          placeholder: "e.g., 4-5 LPA",
+          required: true,
+          icon: <IndianRupee />,
+        },
+        {
+          name: "validityPeriod",
+          label: "Job Validity",
+          type: "select",
+          options: ["3-month", "6-month", "1-year"],
+          required: true,
+          icon: <Calendar />,
+        },
+        {
+          name: "hiringMultipleCandidates",
+          label: "Hiring Multiple Candidates?",
+          type: "select",
+          options: ["No", "Yes"],
+          required: true,
+          icon: <Users />,
+        },
+      ],
+    },
+    {
+      title: "Description",
+      icon: <FileText className="w-5 h-5" />,
+      fields: [
+        {
+          name: "introduction",
+          label: "Job Introduction",
+          type: "textarea",
+          rows: 4,
+          required: true,
+          icon: <FileText />,
+        },
+        {
+          name: "responsibilities",
+          label: "Responsibilities",
+          type: "textarea",
+          rows: 4,
+          required: true,
+          icon: <FileText />,
+        },
+        {
+          name: "qualifications",
+          label: "Qualifications",
+          type: "textarea",
+          rows: 4,
+          required: true,
+          icon: <GraduationCap />,
+        },
+        {
+          name: "offers",
+          label: "What We Offer (Benefits, Perks)",
+          type: "textarea",
+          rows: 3,
+          required: false,
+          icon: <Gift />,
+        },
+      ],
+    },
+    {
+      title: "Skills & Website",
+      icon: <Cpu className="w-5 h-5" />,
+      fields: [
+        {
+          name: "requiredSkills",
+          label: "Required Skills (comma separated)",
+          type: "text",
+          placeholder: "e.g., JavaScript, React, Node.js",
+          required: true,
+          icon: <Cpu />,
+        },
+        {
+          name: "personalWebsiteTitle",
+          label: "Website Title (e.g., Company Blog)",
+          type: "text",
+          required: false,
+          icon: <Globe />,
+        },
+        {
+          name: "personalWebsiteUrl",
+          label: "Website URL",
+          type: "url",
+          placeholder: "https://example.com",
+          required: false,
+          icon: <LinkIcon />,
+        },
+      ],
+    },
+  ];
+
   return (
-    <div className="max-w-4xl mx-auto bg-white shadow-lg p-8 rounded-lg mt-8 border">
-      <h2 className="text-3xl font-semibold mb-6 text-center">Post a Job</h2>
-      <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-6">
-        {/* Job Title */}
-        <div>
-          <label className="block font-semibold mb-2">Job Title</label>
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-lg focus:ring focus:ring-blue-300"
-            required
-          />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-[#1B1D3E] to-[#204674] px-6 py-5">
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Briefcase className="w-6 h-6" />
+              Post a New Job
+            </h1>
+            <p className="text-blue-100 mt-1 text-sm">
+              Fill in the details below to attract the best candidates.
+            </p>
+          </div>
 
-        {/* Job Type */}
-        <div>
-          <label className="block font-semibold mb-2">Job Type</label>
-          <select
-            name="jobType"
-            value={formData.jobType}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-lg focus:ring focus:ring-blue-300"
-            required
-          >
-            <option value="">Select</option>
-            <option value="Full-time">Full-time</option>
-            <option value="Part-time">Part-time</option>
-          </select>
-        </div>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-8">
+            {sections.map((section, idx) => (
+              <div
+                key={idx}
+                className="bg-gray-50 rounded-xl p-5 border border-gray-200"
+              >
+                <div className="flex items-center gap-2 mb-4 text-[#1B1D3E]">
+                  <div className="p-2 bg-white rounded-lg shadow-sm">
+                    {section.icon}
+                  </div>
+                  <h2 className="text-lg font-semibold">{section.title}</h2>
+                </div>
 
-        {/* Location */}
-        <div>
-          <label className="block font-semibold mb-2">Location</label>
-          <input
-            type="text"
-            name="location"
-            value={formData.location}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-lg focus:ring focus:ring-blue-300"
-            required
-          />
-        </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {section.fields.map((field) => {
+                    const value =
+                      field.name === "requiredSkills"
+                        ? skillsInput
+                        : formData[field.name];
 
-        {/* Company Name */}
-        <div>
-          <label className="block font-semibold mb-2">Company Name</label>
-          <input
-            type="text"
-            name="companyName"
-            value={formData.companyName}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-lg focus:ring focus:ring-blue-300"
-            required
-          />
-        </div>
+                    if (field.type === "textarea") {
+                      return (
+                        <div
+                          key={field.name}
+                          className="md:col-span-2 space-y-1.5"
+                        >
+                          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                            {field.icon}
+                            {field.label}
+                            {field.required && (
+                              <span className="text-red-500">*</span>
+                            )}
+                          </label>
+                          <textarea
+                            name={field.name}
+                            value={value}
+                            onChange={handleChange}
+                            rows={field.rows || 3}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm"
+                            required={field.required}
+                          />
+                        </div>
+                      );
+                    } else if (field.type === "select") {
+                      return (
+                        <div key={field.name} className="space-y-1.5">
+                          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                            {field.icon}
+                            {field.label}
+                            {field.required && (
+                              <span className="text-red-500">*</span>
+                            )}
+                          </label>
+                          <select
+                            name={field.name}
+                            value={value}
+                            onChange={handleChange}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm appearance-none bg-white"
+                            required={field.required}
+                          >
+                            <option value="">Select {field.label}</option>
+                            {field.options.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div key={field.name} className="space-y-1.5">
+                          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                            {field.icon}
+                            {field.label}
+                            {field.required && (
+                              <span className="text-red-500">*</span>
+                            )}
+                          </label>
+                          <input
+                            type={field.type}
+                            name={field.name}
+                            value={value}
+                            onChange={
+                              field.name === "requiredSkills"
+                                ? handleSkillsChange
+                                : handleChange
+                            }
+                            placeholder={field.placeholder || ""}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm"
+                            required={field.required}
+                          />
+                        </div>
+                      );
+                    }
+                  })}
+                </div>
+              </div>
+            ))}
 
-        {/* Salary (Number Input) */}
-        <div>
-          <label className="block font-semibold mb-2">Salary</label>
-          <input
-            type="number"
-            name="salary"
-            value={formData.salary}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-lg focus:ring focus:ring-blue-300"
-            required
-          />
+            {/* Submit Button */}
+            <div className="flex justify-end pt-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-8 py-3 bg-gradient-to-r from-[#1B1D3E] to-[#204674] text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Posting...
+                  </>
+                ) : (
+                  "Post Job"
+                )}
+              </button>
+            </div>
+          </form>
         </div>
-
-        {/* Job Validity */}
-        <div>
-          <label className="block font-semibold mb-2">Job Validity</label>
-          <select
-            name="validityPeriod"
-            value={formData.validityPeriod}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-lg focus:ring focus:ring-blue-300"
-            required
-          >
-            <option value="">Select</option>
-            <option value="3-month">3 Months</option>
-            <option value="6-month">6 Months</option>
-            <option value="1-year">1 Year</option>
-          </select>
-        </div>
-
-        {/* Hiring Multiple Candidates */}
-        <div>
-          <label className="block font-semibold mb-2">
-            Hiring Multiple Candidates?
-          </label>
-          <select
-            name="hiringMultipleCandidates"
-            value={formData.hiringMultipleCandidates}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-lg focus:ring focus:ring-blue-300"
-            required
-          >
-            <option value="No">No</option>
-            <option value="Yes">Yes</option>
-          </select>
-        </div>
-
-        {/* Job Niche */}
-        <div>
-          <label className="block font-semibold mb-2">Job Niche</label>
-          <input
-            type="text"
-            name="jobNiche"
-            value={formData.jobNiche}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-lg focus:ring focus:ring-blue-300"
-            required
-          />
-        </div>
-
-        {/* Introduction */}
-        <div className="col-span-2">
-          <label className="block font-semibold mb-2">Job Introduction</label>
-          <textarea
-            name="introduction"
-            value={formData.introduction}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-lg focus:ring focus:ring-blue-300"
-            rows={4}
-            required
-          ></textarea>
-        </div>
-
-        {/* Responsibilities */}
-        <div className="col-span-2">
-          <label className="block font-semibold mb-2">Responsibilities</label>
-          <textarea
-            name="responsibilities"
-            value={formData.responsibilities}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-lg focus:ring focus:ring-blue-300"
-            rows={4}
-            required
-          ></textarea>
-        </div>
-
-        {/* Qualifications */}
-        <div className="col-span-2">
-          <label className="block font-semibold mb-2">Qualifications</label>
-          <textarea
-            name="qualifications"
-            value={formData.qualifications}
-            onChange={handleChange}
-            className="w-full border p-2 rounded-lg focus:ring focus:ring-blue-300"
-            rows={4}
-            required
-          ></textarea>
-        </div>
-
-        {/* Submit Button */}
-        <div className="col-span-2 flex justify-center mt-4">
-          <button
-            type="submit"
-            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
-          >
-            Post Job
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 };

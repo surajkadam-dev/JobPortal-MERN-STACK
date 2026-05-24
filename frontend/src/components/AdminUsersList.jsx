@@ -59,7 +59,7 @@ const AdminUsersList = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { users, loading, error, message } = useSelector(
-    (state) => state.admin
+    (state) => state.admin,
   );
 
   const [selectedUser, setSelectedUser] = useState(null);
@@ -72,8 +72,7 @@ const AdminUsersList = () => {
       toast.error(error);
       dispatch(clearAdminErrors());
     }
-  }, [dispatch, error,message]);
-
+  }, [dispatch, error, message]);
 
   const handleBlockClick = (user) => {
     setSelectedUser(user);
@@ -182,7 +181,7 @@ const AdminUsersList = () => {
                         <td className="py-4 px-4">
                           <span
                             className={`${getRoleColor(
-                              user.role
+                              user.role,
                             )} px-1 py-1 rounded-full text-sm font-medium`}
                           >
                             {user.role}
@@ -263,7 +262,7 @@ const AdminUsersList = () => {
                       </div>
                       <span
                         className={`${getRoleColor(
-                          user.role
+                          user.role,
                         )} px-3 py-1 rounded-full text-sm`}
                       >
                         {user.role}

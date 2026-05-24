@@ -60,7 +60,6 @@ const About = () => {
         </motion.div>
       </div>
 
-      {/* Additional Information Section */}
       <div className="mt-16">
         <motion.h2
           initial={{ opacity: 0, y: 50 }}
